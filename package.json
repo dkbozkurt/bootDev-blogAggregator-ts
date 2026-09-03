@@ -1,0 +1,27 @@
+{
+  "name": "bootdev-blogaggregator-ts",
+  "version": "1.0.0",
+  "description": "Build an RSS feed aggregator in TypeScript with PostgreSQL",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "tsx ./src/index.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://dkbozkurt@github.com/dkbozkurt/bootDev-blogAggregator-ts.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dkbozkurt/bootDev-blogAggregator-ts/issues"
+  },
+  "homepage": "https://github.com/dkbozkurt/bootDev-blogAggregator-ts#readme",
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  },
+  "type": "module"
+}
