@@ -2,7 +2,7 @@ import os from "os";
 import path from "path";
 import fs from "fs";
 
-const configPath = path.join(os.homedir(),"Projects","bootDev-blogAggregator-ts", ".gatorconfig.json");
+const configPath = path.join(os.homedir(),".gatorconfig.json");
 
 export type Config = {
     dbUrl: string;
