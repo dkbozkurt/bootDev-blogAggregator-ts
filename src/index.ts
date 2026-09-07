@@ -1,8 +1,8 @@
 import { Config, readConfig, setUser } from "./config.js";
-import { CommandsRegistry, registerCommand, runCommand, handlerLogin } from "./commands.js";
+import { CommandsRegistry, registerCommand, runCommand, handlerLogin, handlerRegister } from "./commands.js";
 import { argv } from "process";
 
-function main()
+async function main()
 {
     // setUser("DogukanKaanBozkurt");
     // const conf: Config = readConfig();
@@ -20,9 +20,11 @@ function main()
     const cmdArgs = args.slice(1);
 
     const commandsRegistry : CommandsRegistry = {};
-    registerCommand(commandsRegistry, cmdName, handlerLogin);
+    registerCommand(commandsRegistry, "login", handlerLogin);
+    registerCommand(commandsRegistry, "register", handlerRegister);
 
-    runCommand(commandsRegistry, cmdName, ...cmdArgs);
+    await runCommand(commandsRegistry, cmdName, ...cmdArgs);
+    process.exit(0);
 }
 
 main();
