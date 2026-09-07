@@ -1,5 +1,5 @@
 import { Config, readConfig, setUser } from "./config.js";
-import { createUser, getUserByName } from "./lib/db/queries/users.js";
+import { createUser, getUserByName, resetUsers } from "./lib/db/queries/users.js";
 export type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
 export type CommandsRegistry = { [key: string]: CommandHandler };
 export async function handlerLogin(cmdName: string, ...args: string[]): Promise<void> {
@@ -40,6 +40,19 @@ export async function handlerRegister(cmdName: string, ...args: string[]): Promi
     setUser(username);
     console.log("User created successfully!");
     console.log(user);
+}
+
+export async function handlerReset(cmdName: string, ...args: string[]): Promise<void> {
+    if (args.length !== 0) {
+        throw new Error("Too many arguments for reset command.");
+    }
+    try {
+        await resetUsers();
+        console.log("Database reset successfully.");
+    } catch (error) {
+        console.error("Failed to reset the database.");
+        throw error;
+    }
 }
 
 export async function registerCommand(registry: CommandsRegistry, cmdName: string, handler: CommandHandler): Promise<void> {
