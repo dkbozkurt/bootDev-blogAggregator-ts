@@ -1,5 +1,6 @@
-import { Config, readConfig, setUser } from "./config.js";
+import { readConfig, setUser } from "./config.js";
 import { createUser, getUserByName, getUsers, resetUsers } from "./lib/db/queries/users.js";
+import { fetchFeed } from "./lib/rss.js";
 export type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
 export type CommandsRegistry = { [key: string]: CommandHandler };
 export async function handlerLogin(cmdName: string, ...args: string[]): Promise<void> {
@@ -71,6 +72,15 @@ export async function handlerUsers(cmdName: string, ...args: string[]): Promise<
             console.log(`* ${user.name}`);
         }
     }
+}
+
+export async function handlerAgg(cmdName: string, ...args: string[]): Promise<void> {
+    if (args.length !== 0) {
+        throw new Error("Too many arguments for agg command.");
+    }
+
+    const feed = await fetchFeed("https://www.wagslane.dev/index.xml");
+    console.log(JSON.stringify(feed, null, 2));
 }
 
 export async function registerCommand(registry: CommandsRegistry, cmdName: string, handler: CommandHandler): Promise<void> {
