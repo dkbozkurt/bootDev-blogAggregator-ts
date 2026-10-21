@@ -1,4 +1,4 @@
-import { CommandsRegistry, registerCommand, runCommand, handlerLogin, handlerRegister, handlerReset, handlerUsers, handlerAgg } from "./commands.js";
+import { CommandsRegistry, registerCommand, runCommand, handlerLogin, handlerRegister, handlerReset, handlerUsers, handlerAgg, handlerAddFeed } from "./commands.js";
 import { argv } from "process";
 
 async function main() {
@@ -23,6 +23,7 @@ async function main() {
     await registerCommand(commandsRegistry, "reset", handlerReset);
     await registerCommand(commandsRegistry, "users", handlerUsers);
     await registerCommand(commandsRegistry, "agg", handlerAgg);
+    await registerCommand(commandsRegistry, "addfeed", handlerAddFeed);
 
     try {
         await runCommand(commandsRegistry, cmdName, ...cmdArgs);

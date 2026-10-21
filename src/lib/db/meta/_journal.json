@@ -8,6 +8,13 @@
       "when": 1788458328186,
       "tag": "0000_absent_makkari",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792598307219,
+      "tag": "0001_gifted_blindfold",
+      "breakpoints": true
     }
   ]
 }
