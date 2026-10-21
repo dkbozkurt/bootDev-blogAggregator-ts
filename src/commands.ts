@@ -1,6 +1,6 @@
 import { readConfig, setUser } from "./config.js";
 import { createUser, getUserByName, getUsers, resetUsers } from "./lib/db/queries/users.js";
-import { createFeed } from "./lib/db/queries/feeds.js";
+import { createFeed, getFeeds } from "./lib/db/queries/feeds.js";
 import { fetchFeed } from "./lib/rss.js";
 export type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
 export type CommandsRegistry = { [key: string]: CommandHandler };
@@ -107,6 +107,24 @@ function printFeed(feed: { id: string; name: string; url: string; userId: string
     console.log(`* Name:    ${feed.name}`);
     console.log(`* URL:     ${feed.url}`);
     console.log(`* User ID: ${feed.userId}`);
+}
+
+export async function handlerFeeds(cmdName: string, ...args: string[]): Promise<void> {
+    if (args.length !== 0) {
+        throw new Error("Too many arguments for feeds command.");
+    }
+
+    const allFeeds = await getFeeds();
+    if (allFeeds.length === 0) {
+        console.log("No feeds found.");
+        return;
+    }
+
+    for (const feed of allFeeds) {
+        console.log(`* ${feed.name}`);
+        console.log(`  URL:      ${feed.url}`);
+        console.log(`  Added by: ${feed.userName}`);
+    }
 }
 
 export async function registerCommand(registry: CommandsRegistry, cmdName: string, handler: CommandHandler): Promise<void> {
