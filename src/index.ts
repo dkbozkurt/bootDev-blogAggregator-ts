@@ -1,4 +1,4 @@
-import { CommandsRegistry, registerCommand, middlewareLoggedIn, runCommand, handlerLogin, handlerRegister, handlerReset, handlerUsers, handlerAgg, handlerAddFeed, handlerFeeds, handlerFollow, handlerFollowing, handlerUnfollow } from "./commands.js";
+import { CommandsRegistry, registerCommand, middlewareLoggedIn, runCommand, handlerLogin, handlerRegister, handlerReset, handlerUsers, handlerAgg, handlerAddFeed, handlerFeeds, handlerFollow, handlerFollowing, handlerUnfollow, handlerBrowse } from "./commands.js";
 import { argv } from "process";
 
 async function main() {
@@ -28,6 +28,7 @@ async function main() {
     await registerCommand(commandsRegistry, "follow", middlewareLoggedIn(handlerFollow));
     await registerCommand(commandsRegistry, "following", middlewareLoggedIn(handlerFollowing));
     await registerCommand(commandsRegistry, "unfollow", middlewareLoggedIn(handlerUnfollow));
+    await registerCommand(commandsRegistry, "browse", middlewareLoggedIn(handlerBrowse));
 
     try {
         await runCommand(commandsRegistry, cmdName, ...cmdArgs);

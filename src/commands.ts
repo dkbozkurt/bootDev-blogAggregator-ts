@@ -3,7 +3,7 @@ import { User } from "./schema.js";
 import { createUser, getUserByName, getUsers, resetUsers } from "./lib/db/queries/users.js";
 import { createFeed, getFeeds, getFeedByUrl, markFeedFetched, getNextFeedToFetch } from "./lib/db/queries/feeds.js";
 import { createFeedFollow, getFeedFollowsForUser, deleteFeedFollow } from "./lib/db/queries/feedFollows.js";
-import { createPost } from "./lib/db/queries/posts.js";
+import { createPost, getPostsForUser } from "./lib/db/queries/posts.js";
 import { fetchFeed } from "./lib/rss.js";
 export type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
 export type CommandsRegistry = { [key: string]: CommandHandler };
@@ -283,6 +283,55 @@ export async function handlerUnfollow(cmdName: string, user: User, ...args: stri
     }
 
     console.log(`${user.name} is no longer following ${feed.name}.`);
+}
+
+export async function handlerBrowse(cmdName: string, user: User, ...args: string[]): Promise<void> {
+    if (args.length > 1) {
+        throw new Error("Usage: browse [limit]");
+    }
+
+    let limit = 2;
+    if (args.length === 1) {
+        const parsed = Number(args[0]);
+        if (!Number.isInteger(parsed) || parsed <= 0) {
+            throw new Error(`Invalid limit "${args[0]}". Use a positive whole number.`);
+        }
+        limit = parsed;
+    }
+
+    const userPosts = await getPostsForUser(user.id, limit);
+    if (userPosts.length === 0) {
+        console.log("No posts found. Follow a feed, then run agg to collect some.");
+        return;
+    }
+
+    for (const post of userPosts) {
+        printPost(post);
+    }
+}
+
+function printPost(post: {
+    title: string;
+    url: string;
+    description: string | null;
+    publishedAt: Date | null;
+    feedName: string;
+}): void {
+    const published = post.publishedAt ? post.publishedAt.toISOString().slice(0, 10) : "unknown date";
+
+    console.log(`\n${post.title}`);
+    console.log(`  ${post.feedName} · ${published}`);
+    console.log(`  ${post.url}`);
+
+    if (post.description) {
+        console.log(`  ${summarize(post.description)}`);
+    }
+}
+
+// feed descriptions are HTML; this is a rough strip for terminal display
+function summarize(description: string, maxLength = 100): string {
+    const text = description.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    return text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
 }
 
 export async function registerCommand(registry: CommandsRegistry, cmdName: string, handler: CommandHandler): Promise<void> {
