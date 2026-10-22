@@ -2,7 +2,7 @@ import { readConfig, setUser } from "./config.js";
 import { User } from "./schema.js";
 import { createUser, getUserByName, getUsers, resetUsers } from "./lib/db/queries/users.js";
 import { createFeed, getFeeds, getFeedByUrl } from "./lib/db/queries/feeds.js";
-import { createFeedFollow, getFeedFollowsForUser } from "./lib/db/queries/feedFollows.js";
+import { createFeedFollow, getFeedFollowsForUser, deleteFeedFollow } from "./lib/db/queries/feedFollows.js";
 import { fetchFeed } from "./lib/rss.js";
 export type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
 export type CommandsRegistry = { [key: string]: CommandHandler };
@@ -176,6 +176,26 @@ export async function handlerFollowing(cmdName: string, user: User, ...args: str
     for (const follow of follows) {
         console.log(`* ${follow.feedName}`);
     }
+}
+
+export async function handlerUnfollow(cmdName: string, user: User, ...args: string[]): Promise<void> {
+    if (args.length !== 1) {
+        throw new Error("Usage: unfollow <url>");
+    }
+
+    const url = args[0];
+
+    const feed = await getFeedByUrl(url);
+    if (!feed) {
+        throw new Error(`No feed found with url "${url}".`);
+    }
+
+    const deleted = await deleteFeedFollow(user.id, feed.id);
+    if (deleted.length === 0) {
+        throw new Error(`${user.name} is not following "${feed.name}".`);
+    }
+
+    console.log(`${user.name} is no longer following ${feed.name}.`);
 }
 
 export async function registerCommand(registry: CommandsRegistry, cmdName: string, handler: CommandHandler): Promise<void> {
