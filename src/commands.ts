@@ -3,6 +3,7 @@ import { User } from "./schema.js";
 import { createUser, getUserByName, getUsers, resetUsers } from "./lib/db/queries/users.js";
 import { createFeed, getFeeds, getFeedByUrl, markFeedFetched, getNextFeedToFetch } from "./lib/db/queries/feeds.js";
 import { createFeedFollow, getFeedFollowsForUser, deleteFeedFollow } from "./lib/db/queries/feedFollows.js";
+import { createPost } from "./lib/db/queries/posts.js";
 import { fetchFeed } from "./lib/rss.js";
 export type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
 export type CommandsRegistry = { [key: string]: CommandHandler };
@@ -156,10 +157,31 @@ async function scrapeFeeds(): Promise<void> {
 
     const rssFeed = await fetchFeed(feed.url);
 
-    console.log(`\n${feed.name} (${feed.url})`);
+    let saved = 0;
     for (const item of rssFeed.channel.item) {
-        console.log(` - ${item.title}`);
+        const post = await createPost(
+            item.title,
+            item.link,
+            item.description,
+            parsePubDate(item.pubDate),
+            feed.id,
+        );
+
+        // onConflictDoNothing returns nothing when we already had this url
+        if (post) {
+            saved++;
+        }
     }
+
+    console.log(
+        `\n${feed.name}: ${rssFeed.channel.item.length} items, ${saved} new, ` +
+            `${rssFeed.channel.item.length - saved} already stored`,
+    );
+}
+
+function parsePubDate(pubDate: string): Date | null {
+    const date = new Date(pubDate);
+    return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function handleScrapeError(error: unknown): void {
