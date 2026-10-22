@@ -1,7 +1,7 @@
 import { readConfig, setUser } from "./config.js";
 import { User } from "./schema.js";
 import { createUser, getUserByName, getUsers, resetUsers } from "./lib/db/queries/users.js";
-import { createFeed, getFeeds, getFeedByUrl } from "./lib/db/queries/feeds.js";
+import { createFeed, getFeeds, getFeedByUrl, markFeedFetched, getNextFeedToFetch } from "./lib/db/queries/feeds.js";
 import { createFeedFollow, getFeedFollowsForUser, deleteFeedFollow } from "./lib/db/queries/feedFollows.js";
 import { fetchFeed } from "./lib/rss.js";
 export type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
@@ -97,12 +97,77 @@ export async function handlerUsers(cmdName: string, ...args: string[]): Promise<
 }
 
 export async function handlerAgg(cmdName: string, ...args: string[]): Promise<void> {
-    if (args.length !== 0) {
-        throw new Error("Too many arguments for agg command.");
+    if (args.length !== 1) {
+        throw new Error("Usage: agg <time_between_reqs>   e.g. 30s, 10m, 1h");
     }
 
-    const feed = await fetchFeed("https://www.wagslane.dev/index.xml");
-    console.log(JSON.stringify(feed, null, 2));
+    const timeBetweenRequests = parseDuration(args[0]);
+    if (timeBetweenRequests === undefined) {
+        throw new Error(`Invalid duration "${args[0]}". Use a number followed by ms, s, m or h.`);
+    }
+
+    console.log(`Collecting feeds every ${args[0]}...`);
+
+    // run once straight away, then on every tick
+    scrapeFeeds().catch(handleScrapeError);
+
+    const interval = setInterval(() => {
+        scrapeFeeds().catch(handleScrapeError);
+    }, timeBetweenRequests);
+
+    // keep the process alive until Ctrl-C
+    await new Promise<void>((resolve) => {
+        process.on("SIGINT", () => {
+            console.log("\nShutting down feed aggregator...");
+            clearInterval(interval);
+            resolve();
+        });
+    });
+}
+
+export function parseDuration(durationStr: string): number | undefined {
+    const match = durationStr.match(/^(\d+)(ms|s|m|h)$/);
+    if (!match) {
+        return undefined;
+    }
+
+    const value = Number(match[1]);
+    switch (match[2]) {
+        case "ms":
+            return value;
+        case "s":
+            return value * 1000;
+        case "m":
+            return value * 60 * 1000;
+        case "h":
+            return value * 60 * 60 * 1000;
+    }
+}
+
+async function scrapeFeeds(): Promise<void> {
+    const feed = await getNextFeedToFetch();
+    if (!feed) {
+        console.log("No feeds to scrape. Add one with addfeed.");
+        return;
+    }
+
+    // mark it before fetching, so a slow or broken feed cannot block the rotation
+    await markFeedFetched(feed.id);
+
+    const rssFeed = await fetchFeed(feed.url);
+
+    console.log(`\n${feed.name} (${feed.url})`);
+    for (const item of rssFeed.channel.item) {
+        console.log(` - ${item.title}`);
+    }
+}
+
+function handleScrapeError(error: unknown): void {
+    if (error instanceof Error) {
+        console.error(`Error scraping feed: ${error.message}`);
+    } else {
+        console.error(error);
+    }
 }
 
 export async function handlerAddFeed(cmdName: string, user: User, ...args: string[]): Promise<void> {

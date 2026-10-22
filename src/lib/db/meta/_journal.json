@@ -22,6 +22,13 @@
       "when": 1792599143799,
       "tag": "0002_unusual_shiver_man",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1792659258880,
+      "tag": "0003_classy_darwin",
+      "breakpoints": true
     }
   ]
 }
