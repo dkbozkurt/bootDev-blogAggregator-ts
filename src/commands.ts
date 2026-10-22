@@ -1,6 +1,7 @@
 import { readConfig, setUser } from "./config.js";
 import { createUser, getUserByName, getUsers, resetUsers } from "./lib/db/queries/users.js";
-import { createFeed, getFeeds } from "./lib/db/queries/feeds.js";
+import { createFeed, getFeeds, getFeedByUrl } from "./lib/db/queries/feeds.js";
+import { createFeedFollow, getFeedFollowsForUser } from "./lib/db/queries/feedFollows.js";
 import { fetchFeed } from "./lib/rss.js";
 export type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
 export type CommandsRegistry = { [key: string]: CommandHandler };
@@ -98,8 +99,11 @@ export async function handlerAddFeed(cmdName: string, ...args: string[]): Promis
     }
 
     const feed = await createFeed(name, url, user.id);
+    const feedFollow = await createFeedFollow(user.id, feed.id);
+
     console.log("Feed created successfully!");
     printFeed(feed);
+    console.log(`${feedFollow.userName} is now following ${feedFollow.feedName}.`);
 }
 
 function printFeed(feed: { id: string; name: string; url: string; userId: string }): void {
@@ -124,6 +128,51 @@ export async function handlerFeeds(cmdName: string, ...args: string[]): Promise<
         console.log(`* ${feed.name}`);
         console.log(`  URL:      ${feed.url}`);
         console.log(`  Added by: ${feed.userName}`);
+    }
+}
+
+export async function handlerFollow(cmdName: string, ...args: string[]): Promise<void> {
+    if (args.length !== 1) {
+        throw new Error("Usage: follow <url>");
+    }
+
+    const url = args[0];
+
+    const currentUserName = readConfig().currentUserName;
+    const user = await getUserByName(currentUserName);
+    if (!user) {
+        throw new Error(`Current user "${currentUserName}" does not exist. Log in first.`);
+    }
+
+    const feed = await getFeedByUrl(url);
+    if (!feed) {
+        throw new Error(`No feed found with url "${url}". Add it with addfeed first.`);
+    }
+
+    const feedFollow = await createFeedFollow(user.id, feed.id);
+    console.log(`${feedFollow.userName} is now following ${feedFollow.feedName}.`);
+}
+
+export async function handlerFollowing(cmdName: string, ...args: string[]): Promise<void> {
+    if (args.length !== 0) {
+        throw new Error("Too many arguments for following command.");
+    }
+
+    const currentUserName = readConfig().currentUserName;
+    const user = await getUserByName(currentUserName);
+    if (!user) {
+        throw new Error(`Current user "${currentUserName}" does not exist. Log in first.`);
+    }
+
+    const follows = await getFeedFollowsForUser(user.id);
+    if (follows.length === 0) {
+        console.log(`${currentUserName} is not following any feeds.`);
+        return;
+    }
+
+    console.log(`${currentUserName} is following:`);
+    for (const follow of follows) {
+        console.log(`* ${follow.feedName}`);
     }
 }
 

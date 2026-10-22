@@ -15,6 +15,13 @@
       "when": 1792598307219,
       "tag": "0001_gifted_blindfold",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792599143799,
+      "tag": "0002_unusual_shiver_man",
+      "breakpoints": true
     }
   ]
 }
