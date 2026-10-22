@@ -1,10 +1,30 @@
 import { readConfig, setUser } from "./config.js";
+import { User } from "./schema.js";
 import { createUser, getUserByName, getUsers, resetUsers } from "./lib/db/queries/users.js";
 import { createFeed, getFeeds, getFeedByUrl } from "./lib/db/queries/feeds.js";
 import { createFeedFollow, getFeedFollowsForUser } from "./lib/db/queries/feedFollows.js";
 import { fetchFeed } from "./lib/rss.js";
 export type CommandHandler = (cmdName: string, ...args: string[]) => Promise<void>;
 export type CommandsRegistry = { [key: string]: CommandHandler };
+
+export type UserCommandHandler = (cmdName: string, user: User, ...args: string[]) => Promise<void>;
+
+export function middlewareLoggedIn(handler: UserCommandHandler): CommandHandler {
+    return async (cmdName: string, ...args: string[]): Promise<void> => {
+        const currentUserName = readConfig().currentUserName;
+        if (!currentUserName) {
+            throw new Error("Not logged in. Run login first.");
+        }
+
+        const user = await getUserByName(currentUserName);
+        if (!user) {
+            throw new Error(`Current user "${currentUserName}" does not exist. Log in first.`);
+        }
+
+        await handler(cmdName, user, ...args);
+    };
+}
+
 export async function handlerLogin(cmdName: string, ...args: string[]): Promise<void> {
     if (args.length === 0) {
         throw new Error("Username is required for login.");
@@ -85,18 +105,12 @@ export async function handlerAgg(cmdName: string, ...args: string[]): Promise<vo
     console.log(JSON.stringify(feed, null, 2));
 }
 
-export async function handlerAddFeed(cmdName: string, ...args: string[]): Promise<void> {
+export async function handlerAddFeed(cmdName: string, user: User, ...args: string[]): Promise<void> {
     if (args.length !== 2) {
         throw new Error("Usage: addfeed <name> <url>");
     }
 
     const [name, url] = args;
-
-    const currentUserName = readConfig().currentUserName;
-    const user = await getUserByName(currentUserName);
-    if (!user) {
-        throw new Error(`Current user "${currentUserName}" does not exist. Log in first.`);
-    }
 
     const feed = await createFeed(name, url, user.id);
     const feedFollow = await createFeedFollow(user.id, feed.id);
@@ -131,18 +145,12 @@ export async function handlerFeeds(cmdName: string, ...args: string[]): Promise<
     }
 }
 
-export async function handlerFollow(cmdName: string, ...args: string[]): Promise<void> {
+export async function handlerFollow(cmdName: string, user: User, ...args: string[]): Promise<void> {
     if (args.length !== 1) {
         throw new Error("Usage: follow <url>");
     }
 
     const url = args[0];
-
-    const currentUserName = readConfig().currentUserName;
-    const user = await getUserByName(currentUserName);
-    if (!user) {
-        throw new Error(`Current user "${currentUserName}" does not exist. Log in first.`);
-    }
 
     const feed = await getFeedByUrl(url);
     if (!feed) {
@@ -153,24 +161,18 @@ export async function handlerFollow(cmdName: string, ...args: string[]): Promise
     console.log(`${feedFollow.userName} is now following ${feedFollow.feedName}.`);
 }
 
-export async function handlerFollowing(cmdName: string, ...args: string[]): Promise<void> {
+export async function handlerFollowing(cmdName: string, user: User, ...args: string[]): Promise<void> {
     if (args.length !== 0) {
         throw new Error("Too many arguments for following command.");
     }
 
-    const currentUserName = readConfig().currentUserName;
-    const user = await getUserByName(currentUserName);
-    if (!user) {
-        throw new Error(`Current user "${currentUserName}" does not exist. Log in first.`);
-    }
-
     const follows = await getFeedFollowsForUser(user.id);
     if (follows.length === 0) {
-        console.log(`${currentUserName} is not following any feeds.`);
+        console.log(`${user.name} is not following any feeds.`);
         return;
     }
 
-    console.log(`${currentUserName} is following:`);
+    console.log(`${user.name} is following:`);
     for (const follow of follows) {
         console.log(`* ${follow.feedName}`);
     }
